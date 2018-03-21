@@ -18,6 +18,20 @@ import changeCurrentBlockType from './modifiers/changeCurrentBlockType';
 import createLinkDecorator from './decorators/link';
 import createImageDecorator from './decorators/image';
 import { replaceText } from './utils';
+import { CODE_BLOCK_REGEX } from "./constants";
+
+function inCodeBlock(editorState) {
+  const startKey = editorState.getSelection().getStartKey();
+  if (startKey) {
+    const currentBlockType = editorState
+      .getCurrentContent()
+      .getBlockForKey(startKey)
+      .getType();
+    if (currentBlockType === "code-block") return true;
+  }
+
+  return false;
+}
 
 function checkCharacterForState(editorState, character) {
   let newEditorState = handleBlockType(editorState, character);
@@ -32,7 +46,7 @@ function checkCharacterForState(editorState, character) {
   if (editorState === newEditorState) {
     newEditorState = handleLink(editorState, character);
   }
-  if (editorState === newEditorState && type !== 'code-block') {
+  if (editorState === newEditorState && !inCodeBlock(editorState)) {
     newEditorState = handleInlineStyle(editorState, character);
   }
   return newEditorState;
@@ -54,7 +68,7 @@ function checkReturnForState(editorState, ev) {
           || (/^header-/.test(type) && selection.isCollapsed() && selection.getEndOffset() === text.length))) {
     newEditorState = insertEmptyBlock(editorState);
   }
-  if (newEditorState === editorState && type !== 'code-block' && /^```([\w-]+)?$/.test(text)) {
+  if (newEditorState === editorState && type !== 'code-block' && CODE_BLOCK_REGEX.test(text)) {
     newEditorState = handleNewCodeBlock(editorState);
   }
   if (newEditorState === editorState && type === 'code-block') {
@@ -126,17 +140,32 @@ const createMarkdownShortcutsPlugin = (config = {}) => {
       return 'not-handled';
     },
     handleReturn(ev, editorState, { setEditorState }) {
-      const newEditorState = checkReturnForState(editorState, ev);
+      // If we're in a code block don't add markdown to it
+
+      let newEditorState = checkReturnForState(editorState, ev);
       if (editorState !== newEditorState) {
         setEditorState(newEditorState);
-        return 'handled';
+        return "handled";
       }
-      return 'not-handled';
+
+      if (inCodeBlock(editorState)) return "not-handled";
+
+      newEditorState = checkCharacterForState(editorState, "\n");
+      if (editorState !== newEditorState) {
+        setEditorState(newEditorState);
+        return "handled";
+      }
+
+      return "not-handled";
     },
     handleBeforeInput(character, editorState, { setEditorState }) {
       if (character.match(/[A-z0-9_*~`]/)) {
         return 'not-handled';
       }
+
+      // If we're in a code block don't add markdown to it
+      if (inCodeBlock(editorState)) return "not-handled";
+
       const newEditorState = checkCharacterForState(editorState, character);
       if (editorState !== newEditorState) {
         setEditorState(newEditorState);
@@ -145,7 +174,7 @@ const createMarkdownShortcutsPlugin = (config = {}) => {
       return 'not-handled';
     },
     handlePastedText(text, html, editorState, { setEditorState }) {
-      if (html) {
+      if (html && !inCodeBlock(editorState)) {
         return 'not-handled';
       }
       let newEditorState = editorState;
