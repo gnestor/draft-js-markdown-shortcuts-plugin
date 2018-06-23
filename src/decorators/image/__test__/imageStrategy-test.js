@@ -10,7 +10,7 @@ describe('imageStrategy', () => {
   const contentState = Draft.convertFromRaw({
     entityMap: {
       0: {
-        type: 'IMG',
+        type: 'IMAGE',
         mutability: 'IMMUTABLE',
         data: {
           alt: 'alt',

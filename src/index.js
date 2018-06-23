@@ -97,7 +97,6 @@ const createMarkdownShortcutsPlugin = (config = {}) => {
     }).merge(checkboxBlockRenderMap),
     decorators: [
       createLinkDecorator(config, store),
-      createImageDecorator(config, store)
     ],
     initialize({ setEditorState, getEditorState }) {
       store.setEditorState = setEditorState;

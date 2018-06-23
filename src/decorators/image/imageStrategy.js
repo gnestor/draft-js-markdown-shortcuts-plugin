@@ -4,7 +4,7 @@ const createImageStrategy = () => {
       const entityKey = character.getEntity();
       return (
         entityKey !== null &&
-        contentState.getEntity(entityKey).getType() === 'IMG'
+        contentState.getEntity(entityKey).getType() === 'IMAGE'
       );
     }, callback);
   };

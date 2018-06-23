@@ -1,7 +1,7 @@
-import { EditorState, RichUtils, SelectionState, Modifier } from 'draft-js';
+import { EditorState, SelectionState, Modifier, AtomicBlockUtils } from 'draft-js';
 
 const insertImage = (editorState, matchArr) => {
-  const currentContent = editorState.getCurrentContent();
+  const contentState = editorState.getCurrentContent();
   const selection = editorState.getSelection();
   const key = selection.getStartKey();
   const [
@@ -16,30 +16,24 @@ const insertImage = (editorState, matchArr) => {
     anchorOffset: index,
     focusOffset
   });
-  const nextContent = currentContent.createEntity(
-    'IMG',
+  let newContentState = contentState.createEntity(
+    'IMAGE',
     'IMMUTABLE',
     { alt, src, title }
   );
-  const entityKey = nextContent.getLastCreatedEntityKey();
-  let newContentState = Modifier.replaceText(
-    nextContent,
-    wordSelection,
-    '\u200B',
-    null,
-    entityKey
-  );
-  newContentState = Modifier.insertText(
+  const entityKey = newContentState.getLastCreatedEntityKey();
+  newContentState = Modifier.removeRange(
     newContentState,
-    newContentState.getSelectionAfter(),
+    wordSelection,
+    'backward'
+  );
+  let newEditorState = EditorState.push(editorState, newContentState, 'insert-image');
+  newEditorState = AtomicBlockUtils.insertAtomicBlock(
+    newEditorState,
+    entityKey,
     ' '
   );
-  const newWordSelection = wordSelection.merge({
-    focusOffset: index + 1
-  });
-  let newEditorState = EditorState.push(editorState, newContentState, 'insert-image');
-  newEditorState = RichUtils.toggleLink(newEditorState, newWordSelection, entityKey);
-  return EditorState.forceSelection(newEditorState, newContentState.getSelectionAfter());
+  return EditorState.forceSelection(newEditorState, newEditorState.getCurrentContent().getSelectionAfter());
 };
 
 export default insertImage;
